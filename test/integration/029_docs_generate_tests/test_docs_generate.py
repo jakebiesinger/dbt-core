@@ -743,7 +743,8 @@ class TestDocsGenerate(DBTIntegrationTest):
                         'post-hook': [],
                         'vars': {},
                         'column_types': {},
-                        'quoting': {}
+                        'quoting': {},
+                        'tags': [],
                     },
                     'schema': my_schema_name,
                     'alias': 'model',
@@ -795,7 +796,8 @@ class TestDocsGenerate(DBTIntegrationTest):
                         'post-hook': [],
                         'vars': {},
                         'column_types': {},
-                        'quoting': {}
+                        'quoting': {},
+                        'tags': [],
                     },
                     'schema': my_schema_name,
                     'alias': 'seed',
@@ -813,7 +815,8 @@ class TestDocsGenerate(DBTIntegrationTest):
                         'post-hook': [],
                         'pre-hook': [],
                         'quoting': {},
-                        'vars': {}
+                        'vars': {},
+                        'tags': [],
                     },
                     'depends_on': {'macros': [], 'nodes': ['model.test.model']},
                     'description': '',
@@ -841,7 +844,8 @@ class TestDocsGenerate(DBTIntegrationTest):
                         'post-hook': [],
                         'pre-hook': [],
                         'quoting': {},
-                        'vars': {}
+                        'vars': {},
+                        'tags': [],
                     },
                     'depends_on': {'macros': [], 'nodes': ['model.test.model']},
                     'description': '',
@@ -870,7 +874,8 @@ class TestDocsGenerate(DBTIntegrationTest):
                         'post-hook': [],
                         'pre-hook': [],
                         'quoting': {},
-                        'vars': {}
+                        'vars': {},
+                        'tags': [],
                     },
                     'depends_on': {'macros': [], 'nodes': ['model.test.model']},
                     'description': '',
@@ -933,7 +938,8 @@ class TestDocsGenerate(DBTIntegrationTest):
                         'post-hook': [],
                         'pre-hook': [],
                         'quoting': {},
-                        'vars': {}
+                        'vars': {},
+                        'tags': [],
                     },
                     'depends_on': {'macros': [], 'nodes': []},
                     'description': '',
@@ -973,7 +979,8 @@ class TestDocsGenerate(DBTIntegrationTest):
                         'post-hook': [],
                         'pre-hook': [],
                         'quoting': {},
-                        'vars': {}
+                        'vars': {},
+                        'tags': [],
                     },
                     'depends_on': {
                         'macros': [],
@@ -1035,7 +1042,8 @@ class TestDocsGenerate(DBTIntegrationTest):
                         'post-hook': [],
                         'pre-hook': [],
                         'quoting': {},
-                        'vars': {}
+                        'vars': {},
+                        'tags': [],
                     },
                     'depends_on': {
                         'macros': [],
@@ -1087,7 +1095,8 @@ class TestDocsGenerate(DBTIntegrationTest):
                         'post-hook': [],
                         'pre-hook': [],
                         'quoting': {},
-                        'vars': {}
+                        'vars': {},
+                        'tags': [],
                     },
                     'depends_on': {'macros': [], 'nodes': []},
                     'description': '',
@@ -1195,7 +1204,8 @@ class TestDocsGenerate(DBTIntegrationTest):
                         'post-hook': [],
                         'pre-hook': [],
                         'quoting': {},
-                        'vars': {}
+                        'vars': {},
+                        'tags': [],
                     },
                     'depends_on': {'macros': [], 'nodes': ['seed.test.seed']},
                     'empty': False,
@@ -1246,7 +1256,8 @@ class TestDocsGenerate(DBTIntegrationTest):
                         'post-hook': [],
                         'pre-hook': [],
                         'quoting': {},
-                        'vars': {}
+                        'vars': {},
+                        'tags': [],
                     },
                     'depends_on': {
                         'macros': [],
@@ -1347,6 +1358,7 @@ class TestDocsGenerate(DBTIntegrationTest):
                         'vars': {},
                         'column_types': {},
                         'quoting': {},
+                        'tags': [],
                     },
                     'schema': my_schema_name,
                     'alias': 'seed',
@@ -1407,6 +1419,7 @@ class TestDocsGenerate(DBTIntegrationTest):
                         "vars": {},
                         "column_types": {},
                         "quoting": {},
+                        "tags": [],
                     },
                     "schema": my_schema_name,
                     "alias": "model",
@@ -1461,6 +1474,7 @@ class TestDocsGenerate(DBTIntegrationTest):
                         "vars": {},
                         "column_types": {},
                         "quoting": {},
+                        "tags": [],
                     },
                     "schema": my_schema_name,
                     "alias": "seed",
@@ -1557,7 +1571,8 @@ class TestDocsGenerate(DBTIntegrationTest):
                         'post-hook': [],
                         'pre-hook': [],
                         'quoting': {},
-                        'vars': {}
+                        'vars': {},
+                        'tags': [],
                     },
                     'depends_on': {
                         'macros': [],
@@ -1607,6 +1622,7 @@ class TestDocsGenerate(DBTIntegrationTest):
                         'pre-hook': [],
                         'quoting': {},
                         'vars': {},
+                        'tags': [],
                     },
                     'depends_on': {'macros': [], 'nodes': []},
                     'description': '',
@@ -1649,7 +1665,8 @@ class TestDocsGenerate(DBTIntegrationTest):
                         'post-hook': [],
                         'pre-hook': [],
                         'quoting': {},
-                        'vars': {}
+                        'vars': {},
+                        'tags': [],
                     },
                     'depends_on': {'macros': [], 'nodes': ['model.test.model']},
                     'description': '',
@@ -1691,7 +1708,8 @@ class TestDocsGenerate(DBTIntegrationTest):
                         'post-hook': [],
                         'pre-hook': [],
                         'quoting': {},
-                        'vars': {}
+                        'vars': {},
+                        'tags': [],
                     },
                     'depends_on': {'macros': [], 'nodes': ['model.test.model']},
                     'description': '',
@@ -1735,6 +1753,7 @@ class TestDocsGenerate(DBTIntegrationTest):
                         'pre-hook': [],
                         'quoting': {},
                         'vars': {},
+                        'tags': [],
                     },
                     'depends_on': {'macros': [], 'nodes': ['model.test.model']},
                     'description': '',
@@ -1812,7 +1831,8 @@ class TestDocsGenerate(DBTIntegrationTest):
                         'post-hook': [],
                         'vars': {},
                         'column_types': {},
-                        'quoting': {}
+                        'quoting': {},
+                        'tags': [],
                     },
                     'depends_on': {
                         'nodes': ['model.test.ephemeral_copy'],
@@ -1895,7 +1915,8 @@ class TestDocsGenerate(DBTIntegrationTest):
                         'post-hook': [],
                         'vars': {},
                         'column_types': {},
-                        'quoting': {}
+                        'quoting': {},
+                        'tags': [],
                     },
                     'depends_on': {
                         'nodes': ['model.test.ephemeral_summary'],
@@ -1967,6 +1988,7 @@ class TestDocsGenerate(DBTIntegrationTest):
                         'pre-hook': [],
                         'quoting': {},
                         'vars': {},
+                        'tags': [],
                     },
                     'depends_on': {'macros': [], 'nodes': []},
                     'description': '',
