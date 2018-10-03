@@ -1,7 +1,10 @@
+from copy import deepcopy
+
 import dbt.exceptions
 
 from dbt.node_types import NodeType
 from dbt.contracts.graph.manifest import Manifest
+from dbt.contracts.graph.parsed import ParsedNodePatch
 from dbt.utils import timestring
 
 import dbt.parser
@@ -26,6 +29,9 @@ class GraphLoader(object):
         manifest = Manifest(nodes=nodes, macros=macros, docs=docs,
                             generated_at=timestring(), config=project_config)
         manifest.add_nodes(tests)
+        manifest.patch_nodes(patches)
+
+        patches = DocumentationLoader.get_model_doc_patches(nodes, docs)
         manifest.patch_nodes(patches)
 
         manifest = dbt.parser.ParserUtils.process_refs(
@@ -233,6 +239,65 @@ class DocumentationLoader(ResourceLoader):
             all_projects=all_projects,
             root_dir=project.project_root,
             relative_dirs=project.docs_paths)
+
+    @classmethod
+    def get_model_doc_patches(cls, nodes, docs):
+        patches = {}
+        for doc_name, docfile in docs.items():
+            parts = doc_name.split('__')
+            if len(parts) == 2:
+                maybe_model, maybe_column = parts
+            else:
+                maybe_model, maybe_column = doc_name, None
+
+            # Look for docs whose name matches that of a model node.
+            # TODO: Should this work for other non-model types as well?
+            model_name = 'model.' + maybe_model
+            node = nodes.get(model_name)
+
+            if not node:
+                continue
+
+            column_info = deepcopy(node['columns'])
+            description = node['description']
+            doc_ref = "{{ doc('%s') }}" % docfile.name
+            docrefs = []
+            updated = False
+            if maybe_column:
+                # Replace the column's description if it's not already set.
+                column = node['columns'].get(maybe_column)
+                if not column or not column.get('description'):
+                    info = column_info.setdefault(
+                        maybe_column, {'name': maybe_column})
+                    info['description'] = doc_ref
+                    context = {'doc': dbt.context.parser.docs(node, docrefs, maybe_column)}
+                    updated = True
+            elif not description:
+                # Replace the node's description if it's not already set.
+                description = doc_ref
+                context = {'doc': dbt.context.parser.docs(node, docrefs)}
+                updated = True
+
+            if not updated:
+                continue
+
+            dbt.clients.jinja.get_rendered(doc_ref, context)
+
+            patch = ParsedNodePatch(
+                name=node.name,
+                original_file_path=node['original_file_path'],
+                description=description,
+                columns=column_info,
+                docrefs=docrefs
+            )
+
+            if node.name in patches:
+                patches[node.name].incorporate(**patch.serialize())
+            else:
+                patches[node.name] = patch
+        return patches
+
+
 
 # node loaders
 GraphLoader.register(ModelLoader)
