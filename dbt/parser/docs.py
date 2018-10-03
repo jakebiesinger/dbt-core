@@ -14,12 +14,14 @@ class DocumentationParser(BaseParser):
         """Load and parse documentation in a list of projects. Returns a list
         of ParsedNodes.
         """
-        extension = "[!.#~]*.md"
 
-        file_matches = dbt.clients.system.find_matching(
-            root_dir,
-            relative_dirs,
-            extension)
+        extensions = ["[!.#~]*.md", "[!.#~]*.sql"]
+
+        file_matches = []
+        for extension in extensions:
+            file_matches.extend(
+                dbt.clients.system.find_matching(
+                    root_dir, relative_dirs, extension))
 
         for file_match in file_matches:
             file_contents = dbt.clients.system.load_file_contents(
@@ -44,19 +46,11 @@ class DocumentationParser(BaseParser):
 
     @classmethod
     def parse(cls, all_projects, root_project_config, docfile):
-        try:
-            template = dbt.clients.jinja.get_template(docfile.file_contents,
-                                                      {})
-        except dbt.exceptions.CompilationException as e:
-            e.node = docfile
-            raise
+        env = dbt.clients.jinja.get_env()
+        ast = env.parse(docfile.file_contents)
 
-        schema = getattr(root_project_config.credentials, 'schema', 'public')
-
-        for key, item in template.module.__dict__.items():
-            if type(item) != jinja2.runtime.Macro:
-                continue
-
+        for macro in ast.find_all(jinja2.nodes.Macro):
+            key = macro.name
             if not key.startswith(dbt.utils.DOCS_PREFIX):
                 continue
 
@@ -68,12 +62,19 @@ class DocumentationParser(BaseParser):
             fqn = cls.get_fqn(docfile.path,
                               all_projects[docfile.package_name])
 
+            # HACK: Assume that docs macros do not call other macros and only
+            # have a single relevant Output node. Alternatively we could render
+            # this particular block.
+            if macro.body and macro.body[0].nodes:
+                contents = macro.body[0].nodes[0].data
+            else:
+                contents = ''
             merged = dbt.utils.deep_merge(
                 docfile.serialize(),
                 {
                     'name': name,
                     'unique_id': unique_id,
-                    'block_contents': item().strip(),
+                    'block_contents': contents,
                 }
             )
             yield ParsedDocumentation(**merged)

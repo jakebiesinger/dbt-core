@@ -173,23 +173,25 @@ def create_macro_capture_env(node):
     return ParserMacroCapture
 
 
+def get_env(node=None, capture_macros=False):
+    args = {
+        'extensions': []
+    }
+
+    if capture_macros:
+        args['undefined'] = create_macro_capture_env(node)
+
+    args['extensions'].append(MaterializationExtension)
+    args['extensions'].append(OperationExtension)
+    args['extensions'].append(DocumentationExtension)
+
+    return MacroFuzzEnvironment(**args)
+
+
 def get_template(string, ctx, node=None, capture_macros=False):
     try:
-        args = {
-            'extensions': []
-        }
-
-        if capture_macros:
-            args['undefined'] = create_macro_capture_env(node)
-
-        args['extensions'].append(MaterializationExtension)
-        args['extensions'].append(OperationExtension)
-        args['extensions'].append(DocumentationExtension)
-
-        env = MacroFuzzEnvironment(**args)
-
+        env = get_env(node, capture_macros)
         return env.from_string(dbt.compat.to_string(string), globals=ctx)
-
     except (jinja2.exceptions.TemplateSyntaxError,
             jinja2.exceptions.UndefinedError) as e:
         e.translated = False
