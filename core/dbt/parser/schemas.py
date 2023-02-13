@@ -10,7 +10,7 @@ from dbt.dataclass_schema import ValidationError, dbtClassMixin
 
 from dbt.adapters.factory import get_adapter, get_adapter_package_names
 from dbt.clients.jinja import get_rendered, add_rendered_test_kwargs
-from dbt.clients.yaml_helper import load_yaml_text
+from dbt.clients.yaml_helper import load_yaml_frontmatter, load_yaml_text
 from dbt.parser.schema_renderer import SchemaYamlRenderer
 from dbt.context.context_config import (
     ContextConfig,
@@ -102,6 +102,17 @@ def yaml_from_file(source_file: SchemaSourceFile) -> Dict[str, Any]:
     try:
         # source_file.contents can sometimes be None
         return load_yaml_text(source_file.contents or "", source_file.path)
+    except DbtValidationError as e:
+        raise YamlLoadError(
+            project_name=source_file.project_name, path=source_file.path.relative_path, exc=e
+        )
+
+
+def yaml_frontmatter_from_file(source_file: SchemaSourceFile) -> Dict[str, Any] | None:
+    """Read only the frontmatter of the given file. If loading the yaml fails, raise an exception."""
+    try:
+        # source_file.contents can sometimes be None
+        return load_yaml_frontmatter(source_file.contents or "")
     except DbtValidationError as e:
         raise YamlLoadError(
             project_name=source_file.project_name, path=source_file.path.relative_path, exc=e
@@ -535,6 +546,32 @@ class SchemaParser(SimpleParser[GenericTestBlock, GenericTestNode]):
             if "metrics" in dct:
                 metric_parser = MetricParser(self, yaml_block)
                 metric_parser.parse()
+
+
+class SchemaInModelParser(SchemaParser):
+    def parse_file(self, block: FileBlock, dct: Dict = None) -> None:
+        assert isinstance(block.file, SchemaSourceFile)
+        if not dct:
+            dct = load_yaml_frontmatter(block.contents)
+
+        if dct:
+            # TODO: this feels a bit hacky. Is there a cleaner way to get the implicit model?
+
+            # "prefix" the dct with the current file's model.
+            with_prefix = {"models": [{"name": block.name, **dct}]}
+
+            # contains the FileBlock and the data (dictionary)
+            yaml_block = YamlBlock.from_file_block(block, with_prefix)
+
+            parser: YamlDocsReader
+
+            # TODO: Make the model implicitly "prefixed" using the containing model
+            # Right now, the entire `version:2 models: [{name: <this>, description: "foo"}]` block
+            # needs to be specified in the yaml.
+
+            parser = TestablePatchParser(self, yaml_block, "models")
+            for test_block in parser.parse():
+                self.parse_tests(test_block)
 
 
 def check_format_version(file_path, yaml_dct) -> None:

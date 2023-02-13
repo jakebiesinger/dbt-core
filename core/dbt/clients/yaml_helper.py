@@ -1,5 +1,6 @@
 import dbt.exceptions
 from typing import Any, Dict, Optional
+import frontmatter
 import yaml
 
 # the C version is faster, but it doesn't always exist
@@ -54,6 +55,20 @@ def safe_load(contents) -> Optional[Dict[str, Any]]:
 def load_yaml_text(contents, path=None):
     try:
         return safe_load(contents)
+    except (yaml.scanner.ScannerError, yaml.YAMLError) as e:
+        if hasattr(e, "problem_mark"):
+            error = contextualized_yaml_error(contents, e)
+        else:
+            error = str(e)
+
+        raise dbt.exceptions.DbtValidationError(error)
+
+
+def load_yaml_frontmatter(contents) -> dict[str, Any] | None:
+    try:
+        # TODO: explicitly specify safe handler (this is the default, but good practice)
+        yaml_frontmatter, _ = frontmatter.parse(contents)
+        return yaml_frontmatter if len(yaml_frontmatter) > 0 else None
     except (yaml.scanner.ScannerError, yaml.YAMLError) as e:
         if hasattr(e, "problem_mark"):
             error = contextualized_yaml_error(contents, e)

@@ -179,6 +179,7 @@ class RuntimeConfig(Project, Profile, AdapterRequiredConfig):
             args=args,
             cli_vars=cli_vars,
             dependencies=dependencies,
+            enable_schema_definitions_in_model_files=project.enable_schema_definitions_in_model_files,
         )
 
     # Called by 'load_projects' in this class

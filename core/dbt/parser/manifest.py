@@ -76,7 +76,7 @@ from dbt.parser.docs import DocumentationParser
 from dbt.parser.hooks import HookParser
 from dbt.parser.macros import MacroParser
 from dbt.parser.models import ModelParser
-from dbt.parser.schemas import SchemaParser
+from dbt.parser.schemas import SchemaInModelParser, SchemaParser
 from dbt.parser.search import FileBlock
 from dbt.parser.seeds import SeedParser
 from dbt.parser.snapshots import SnapshotParser
@@ -361,7 +361,7 @@ class ManifestLoader:
             self.manifest.rebuild_disabled_lookup()
 
             # Load yaml files
-            parser_types = [SchemaParser]
+            parser_types = [SchemaParser, SchemaInModelParser]
             for project in self.all_projects.values():
                 if project.project_name not in project_parser_files:
                     continue

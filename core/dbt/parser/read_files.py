@@ -1,4 +1,5 @@
 import os
+from dbt.config.project import Project
 import pathspec  # type: ignore
 import pathlib
 from dbt.clients.system import load_file_contents
@@ -11,10 +12,17 @@ from dbt.contracts.files import (
     SchemaSourceFile,
 )
 
-from dbt.parser.schemas import yaml_from_file, schema_file_keys, check_format_version
+from dbt.parser.schemas import (
+    yaml_from_file,
+    schema_file_keys,
+    check_format_version,
+    yaml_frontmatter_from_file,
+)
 from dbt.exceptions import ParsingError
 from dbt.parser.search import filesystem_search
 from typing import Optional
+
+_SCHEMA_FILE_TYPES = [ParseFileType.Schema, ParseFileType.SchemaInModel]
 
 
 # This loads the files contents and creates the SourceFile object
@@ -25,7 +33,8 @@ def load_source_file(
     saved_files,
 ) -> Optional[AnySourceFile]:
 
-    sf_cls = SchemaSourceFile if parse_file_type == ParseFileType.Schema else SourceFile
+    # TODO: deal with SchemaInModel parse type
+    sf_cls = SchemaSourceFile if parse_file_type in _SCHEMA_FILE_TYPES else SourceFile
     source_file = sf_cls(
         path=path,
         checksum=FileHash.empty(),
@@ -35,7 +44,7 @@ def load_source_file(
 
     skip_loading_schema_file = False
     if (
-        parse_file_type == ParseFileType.Schema
+        parse_file_type in _SCHEMA_FILE_TYPES
         and saved_files
         and source_file.file_id in saved_files
     ):
@@ -57,6 +66,13 @@ def load_source_file(
         dfy = yaml_from_file(source_file)
         if dfy:
             validate_yaml(source_file.path.original_file_path, dfy)
+            source_file.dfy = dfy
+        else:
+            source_file = None
+    elif parse_file_type == ParseFileType.SchemaInModel and source_file.contents:
+        dfy = yaml_frontmatter_from_file(source_file)
+        if dfy:
+            validate_yaml_in_model_frontmatter(source_file.path.original_file_path, dfy)
             source_file.dfy = dfy
         else:
             source_file = None
@@ -90,6 +106,20 @@ def validate_yaml(file_path, dct):
                         "name attribute."
                     )
                     raise ParsingError(msg)
+
+
+# Do some minimal validation of the schema yaml present as frontmatter in a model file.
+# Ensure that the root is not trying to specify a normal schema entry.
+def validate_yaml_in_model_frontmatter(file_path, dct):
+    for forbidden_key in ["name", *schema_file_keys]:
+        if forbidden_key in dct:
+            msg = (
+                f"The model file frontmatter at {file_path} is "
+                f"invalid because it specifies the {forbidden_key} attribute."
+                f"Model frontmatter should only specify the content of a model block, "
+                f"without the `name` attribute."
+            )
+            raise ParsingError(msg)
 
 
 # Special processing for big seed files
@@ -157,7 +187,7 @@ def generate_dbt_ignore_spec(project_root):
 # dictionary needs to be passed in. What determines the order of
 # the various projects? Is the root project always last? Do the
 # non-root projects need to be done separately in order?
-def read_files(project, files, parser_files, saved_files):
+def read_files(project: Project, files, parser_files, saved_files):
     dbt_ignore_spec = generate_dbt_ignore_spec(project.project_root)
     project_files = {}
 
@@ -251,6 +281,20 @@ def read_files(project, files, parser_files, saved_files):
         saved_files,
         dbt_ignore_spec,
     )
+
+    # TODO: default to False
+    if project.to_project_config(with_packages=False).get(
+        "enable_schema_definitions_in_model_files", True
+    ):
+        project_files["SchemaInModelParser"] = read_files_for_parser(
+            project,
+            files,
+            project.model_paths,
+            [".sql"],
+            ParseFileType.SchemaInModel,
+            saved_files,
+            dbt_ignore_spec,
+        )
 
     # Store the parser files for this particular project
     parser_files[project.project_name] = project_files

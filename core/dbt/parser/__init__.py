@@ -7,6 +7,7 @@ from .hooks import HookParser  # noqa
 from .macros import MacroParser  # noqa
 from .models import ModelParser  # noqa
 from .schemas import SchemaParser  # noqa
+from .schemas import SchemaInModelParser  # noqa
 from .seeds import SeedParser  # noqa
 from .snapshots import SnapshotParser  # noqa
 

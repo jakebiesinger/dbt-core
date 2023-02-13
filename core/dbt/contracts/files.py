@@ -21,6 +21,7 @@ class ParseFileType(StrEnum):
     Seed = "seed"
     Documentation = "docs"
     Schema = "schema"
+    SchemaInModel = "schema_in_model"
     Hook = "hook"  # not a real filetype, from dbt_project.yml
 
 
@@ -34,6 +35,7 @@ parse_file_type_to_parser = {
     ParseFileType.Seed: "SeedParser",
     ParseFileType.Documentation: "DocumentationParser",
     ParseFileType.Schema: "SchemaParser",
+    ParseFileType.SchemaInModel: "SchemaInModelParser",
     ParseFileType.Hook: "HookParser",
 }
 

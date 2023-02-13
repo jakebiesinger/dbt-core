@@ -466,6 +466,7 @@ class PartialProject(RenderComponents):
             config_version=cfg.config_version,
             unrendered=unrendered,
             project_env_vars=project_env_vars,
+            enable_schema_definitions_in_model_files=cfg.enable_schema_definitions_in_model_files,
         )
         # sanity check - this means an internal issue
         project.validate()
@@ -575,6 +576,7 @@ class Project:
     config_version: int
     unrendered: RenderComponents
     project_env_vars: Dict[str, Any]
+    enable_schema_definitions_in_model_files: bool
 
     @property
     def all_source_paths(self) -> List[str]:
