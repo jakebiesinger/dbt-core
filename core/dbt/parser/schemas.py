@@ -10,7 +10,7 @@ from dbt.dataclass_schema import ValidationError, dbtClassMixin
 
 from dbt.adapters.factory import get_adapter, get_adapter_package_names
 from dbt.clients.jinja import get_rendered, add_rendered_test_kwargs
-from dbt.clients.yaml_helper import load_yaml_frontmatter, load_yaml_text
+from dbt.clients.yaml_helper import parse_yaml_frontmatter, load_yaml_text
 from dbt.parser.schema_renderer import SchemaYamlRenderer
 from dbt.context.context_config import (
     ContextConfig,
@@ -112,7 +112,7 @@ def yaml_frontmatter_from_file(source_file: SchemaSourceFile) -> Dict[str, Any] 
     """Read only the frontmatter of the given file. If loading the yaml fails, raise an exception."""
     try:
         # source_file.contents can sometimes be None
-        return load_yaml_frontmatter(source_file.contents or "")
+        return parse_yaml_frontmatter(source_file.contents or "", 'warn_or_error')[0]
     except DbtValidationError as e:
         raise YamlLoadError(
             project_name=source_file.project_name, path=source_file.path.relative_path, exc=e
@@ -552,7 +552,7 @@ class SchemaInModelParser(SchemaParser):
     def parse_file(self, block: FileBlock, dct: Dict = None) -> None:
         assert isinstance(block.file, SchemaSourceFile)
         if not dct:
-            dct = load_yaml_frontmatter(block.contents)
+            dct = parse_yaml_frontmatter(block.contents, 'warn_or_error')[0]
 
         if dct:
             # TODO: this feels a bit hacky. Is there a cleaner way to get the implicit model?

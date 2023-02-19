@@ -1,6 +1,6 @@
+import re
 import dbt.exceptions
-from typing import Any, Dict, Optional
-import frontmatter
+from typing import Any, Dict, Literal, Optional, Tuple
 import yaml
 
 # the C version is faster, but it doesn't always exist
@@ -9,6 +9,8 @@ try:
 except ImportError:
     from yaml import Loader, SafeLoader, Dumper  # type: ignore  # noqa: F401
 
+FRONTMATTER_DELIMITER = re.compile(r"^---\s*$", re.MULTILINE)
+NON_WHITESPACE = re.compile(r"\S")
 
 YAML_ERROR_MESSAGE = """
 Syntax error near line {line_number}
@@ -61,18 +63,46 @@ def load_yaml_text(contents, path=None):
         else:
             error = str(e)
 
-        raise dbt.exceptions.DbtValidationError(error)
+        raise dbt.exceptions.DbtValidationError(error)    
 
+def parse_yaml_frontmatter(content: str, on_error: Literal['warn_or_error', 'ignore']) -> Tuple[Optional[dict[str, Any]], str]:
+    """Attempts to parse the YAML Frontmatter from `content`, returning a tuple of the parsed content and the remainder of the string.
 
-def load_yaml_frontmatter(contents) -> dict[str, Any] | None:
+    Frontmatter is defined as a block of YAML between two `---` tokens in an otherwise non-YAML document.
+    
+    The frontmatter must be placed at the beginning of the file: if anything but whitespace is present before the `---`, no attempt to
+    parse will be made. If matching `---` blocks are found, we attempt to parse the string slice between them. If this is not valid YAML,
+    the behavior indicated in `on_error` will be followed, with `ignore` and `warn` returning the original `content` string.
+    """
+    parts = FRONTMATTER_DELIMITER.split(content, 2)
+    if len(parts != 3) or NON_WHITESPACE.search(parts[0]) is not None:
+        # No frontmatter section or non-whitespace preceding the first `---`, so skip frontmatter
+        return None, content
+    
+    yaml_content, after_footer = parts[1:]
+    
     try:
-        # TODO: explicitly specify safe handler (this is the default, but good practice)
-        yaml_frontmatter, _ = frontmatter.parse(contents)
-        return yaml_frontmatter if len(yaml_frontmatter) > 0 else None
+        parsed_yaml = safe_load(yaml_content)
     except (yaml.scanner.ScannerError, yaml.YAMLError) as e:
-        if hasattr(e, "problem_mark"):
-            error = contextualized_yaml_error(contents, e)
-        else:
-            error = str(e)
+        if on_error == 'warn_or_error':
+            if hasattr(e, "problem_mark"):
+                error = contextualized_yaml_error(content, e)
+            else:
+                error = str(e)
+            error = f'Error parsing YAML frontmatter!{error}'
+            dbt.events.functions.warn_or_error(dbt.exceptions.DbtValidationError(error))
+        return None, content
+    
+    return parsed_yaml, after_footer
 
-        raise dbt.exceptions.DbtValidationError(error)
+def maybe_has_yaml_frontmatter(content: str) -> bool:
+    """Return if `content` *might* have YAML frontmatter
+
+    This weak filter allows us to skip the more-expensive YAML parsing (which has to take place even if we're not using the frontmatter).
+    """
+    return FRONTMATTER_DELIMITER.search(content)
+    
+
+
+
+
