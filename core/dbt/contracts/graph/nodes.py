@@ -255,7 +255,12 @@ class ParsedNode(NodeInfoMixin, ParsedNodeMandatory, SerializableType):
             path = self.original_file_path
         else:
             #  Many-to-one relationship of nodes to files.
-            path = os.path.join(self.original_file_path, self.path)
+            if self.original_file_path.endswith(".sql"):
+                # Some models contain schema via YAML frontmatter. Avoid a naming collision by
+                # appending "_subnodes" to the original filename.
+                path = os.path.join(f"{self.original_file_path}_subnodes", self.path)
+            else:
+                path = os.path.join(self.original_file_path, self.path)
         full_path = os.path.join(target_path, subdirectory, self.package_name, path)
 
         write_file(full_path, payload)

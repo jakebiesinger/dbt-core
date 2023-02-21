@@ -1,5 +1,5 @@
 import argparse
-from core.dbt.clients.yaml_helper import maybe_has_yaml_frontmatter, parse_yaml_frontmatter
+from dbt.clients.yaml_helper import maybe_has_yaml_frontmatter, parse_yaml_frontmatter
 import networkx as nx  # type: ignore
 import os
 import pickle
@@ -367,9 +367,9 @@ class Compiler:
         else:
             context = self._create_node_context(node, manifest, extra_context)
             if maybe_has_yaml_frontmatter(node.raw_code):
-                raw_code = parse_yaml_frontmatter(node.raw_code)[1]
+                _, raw_code = parse_yaml_frontmatter(node.raw_code, "ignore")
             else:
-                 raw_code = node.raw_code
+                raw_code = node.raw_code
             node.compiled_code = jinja.get_rendered(
                 raw_code,
                 context,

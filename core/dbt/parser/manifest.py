@@ -465,7 +465,9 @@ class ManifestLoader:
             parser: Parser = parser_cls(project, self.manifest, self.root_project)
             for file_id in parser_files[parser_name]:
                 block = FileBlock(self.manifest.files[file_id])
-                if isinstance(parser, SchemaParser):
+                if isinstance(parser, SchemaInModelParser):
+                    parser.parse_file(block)
+                elif isinstance(parser, SchemaParser):
                     assert isinstance(block.file, SchemaSourceFile)
                     if self.partially_parsing:
                         dct = block.file.pp_dict

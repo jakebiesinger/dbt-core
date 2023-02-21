@@ -33,7 +33,6 @@ def load_source_file(
     saved_files,
 ) -> Optional[AnySourceFile]:
 
-    # TODO: deal with SchemaInModel parse type
     sf_cls = SchemaSourceFile if parse_file_type in _SCHEMA_FILE_TYPES else SourceFile
     source_file = sf_cls(
         path=path,
@@ -50,7 +49,8 @@ def load_source_file(
     ):
         old_source_file = saved_files[source_file.file_id]
         if (
-            source_file.path.modification_time != 0.0
+            isinstance(old_source_file, SchemaSourceFile)
+            and source_file.path.modification_time != 0.0
             and old_source_file.path.modification_time == source_file.path.modification_time
         ):
             source_file.checksum = old_source_file.checksum
@@ -70,7 +70,7 @@ def load_source_file(
         else:
             source_file = None
     elif parse_file_type == ParseFileType.SchemaInModel and source_file.contents:
-        dfy = yaml_frontmatter_from_file(source_file)
+        dfy = yaml_frontmatter_from_file(source_file) or {}
         if dfy:
             validate_yaml_in_model_frontmatter(source_file.path.original_file_path, dfy)
             source_file.dfy = dfy

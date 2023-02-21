@@ -112,7 +112,7 @@ def yaml_frontmatter_from_file(source_file: SchemaSourceFile) -> Dict[str, Any] 
     """Read only the frontmatter of the given file. If loading the yaml fails, raise an exception."""
     try:
         # source_file.contents can sometimes be None
-        return parse_yaml_frontmatter(source_file.contents or "", 'warn_or_error')[0]
+        return parse_yaml_frontmatter(source_file.contents or "", "warn_or_error")[0]
     except DbtValidationError as e:
         raise YamlLoadError(
             project_name=source_file.project_name, path=source_file.path.relative_path, exc=e
@@ -550,9 +550,8 @@ class SchemaParser(SimpleParser[GenericTestBlock, GenericTestNode]):
 
 class SchemaInModelParser(SchemaParser):
     def parse_file(self, block: FileBlock, dct: Dict = None) -> None:
-        assert isinstance(block.file, SchemaSourceFile)
         if not dct:
-            dct = parse_yaml_frontmatter(block.contents, 'warn_or_error')[0]
+            dct, _ = parse_yaml_frontmatter(block.contents, "warn_or_error")
 
         if dct:
             # TODO: this feels a bit hacky. Is there a cleaner way to get the implicit model?
