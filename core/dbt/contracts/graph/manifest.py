@@ -1186,7 +1186,7 @@ class WritableManifest(ArtifactMixin):
     )
     parent_map: Optional[NodeEdgeMap] = field(
         metadata=dict(
-            description="A mapping from child nodes to their dependencies",
+            description="A mapping from child nodes to their dependencies",
         )
     )
     child_map: Optional[NodeEdgeMap] = field(

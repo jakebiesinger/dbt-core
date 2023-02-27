@@ -1,5 +1,5 @@
 import argparse
-from dbt.clients.yaml_helper import maybe_has_yaml_frontmatter, parse_yaml_frontmatter
+from dbt.clients.yaml_helper import maybe_has_yaml_frontmatter, split_yaml_frontmatter
 import networkx as nx  # type: ignore
 import os
 import pickle
@@ -366,8 +366,9 @@ class Compiler:
 
         else:
             context = self._create_node_context(node, manifest, extra_context)
+            # This check appears to be ~27x faster than doing the regex-based split. See https://perfpy.com/247
             if maybe_has_yaml_frontmatter(node.raw_code):
-                _, raw_code = parse_yaml_frontmatter(node.raw_code, "ignore")
+                _, raw_code = split_yaml_frontmatter(node.raw_code, node.original_file_path)
             else:
                 raw_code = node.raw_code
             node.compiled_code = jinja.get_rendered(
