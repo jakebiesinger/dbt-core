@@ -216,6 +216,7 @@ sample_values = [
     types.JinjaLogWarning(),
     types.JinjaLogInfo(msg=""),
     types.JinjaLogDebug(msg=""),
+    types.YamlFrontmatterNotAtFront(original_file_path=""),
     # M - Deps generation ======================
     types.GitSparseCheckoutSubdirectory(subdir=""),
     types.GitProgressCheckoutRevision(revision=""),

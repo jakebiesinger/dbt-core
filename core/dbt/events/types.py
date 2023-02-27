@@ -1057,7 +1057,7 @@ class NodeNotFoundOrDisabled(WarnLevel, pt.NodeNotFoundOrDisabled):
     def message(self) -> str:
         # this is duplicated logic from exceptions.get_not_found_or_disabled_msg
         # when we convert exceptions to be stuctured maybe it can be combined?
-        # convverting the bool to a string since None is also valid
+        # converting the bool to a string since None is also valid
         if self.disabled == "None":
             reason = "was not found or is disabled"
         elif self.disabled == "True":
@@ -1106,6 +1106,22 @@ class JinjaLogDebug(DebugLevel, EventStringFunctor, pt.JinjaLogDebug):
     def message(self) -> str:
         # This is for the log method used in macros so msg cannot be built here
         return self.msg
+
+@dataclass
+class YamlFrontmatterNotAtFront(WarnLevel, pt.YamlFrontmatterNotAtFront):
+    def code(self):
+        return "I064"
+
+    def message(self) -> str:
+        msg = line_wrap_message(
+            f"""\
+            The file {self.original_file_path} contains YAML frontmatter, but it is not the first non-whitespace content and is being ignored.
+
+            To fix this error, place the frontmatter block at the beginning of the file.
+            """
+        )
+        return warning_tag(msg)
+
 
 
 # =======================================================

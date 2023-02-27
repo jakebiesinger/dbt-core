@@ -1067,6 +1067,16 @@ message JinjaLogDebugMsg {
     JinjaLogDebug data = 2;
 }
 
+// I064
+message YamlFrontmatterNotAtFront {
+    string original_file_path = 1;
+}
+
+message YamlFrontmatterNotAtFrontMsg {
+    EventInfo info = 1;
+    YamlFrontmatterNotAtFront data = 2;
+}
+
 // M - Deps generation
 
 // M001

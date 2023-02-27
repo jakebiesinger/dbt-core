@@ -1337,6 +1337,18 @@ class JinjaLogDebugMsg(betterproto.Message):
 
 
 @dataclass
+class YamlFrontmatterNotAtFront(betterproto.Message):
+    """I064"""
+
+    original_file_path: str = betterproto.string_field(1)
+
+@dataclass
+class YamlFrontmatterNotAtFrontMsg(betterproto.Message):
+    info: "EventInfo" = betterproto.message_field(1)
+    data: "YamlFrontmatterNotAtFront" = betterproto.message_field(2)
+
+
+@dataclass
 class GitSparseCheckoutSubdirectory(betterproto.Message):
     """M001"""
 
