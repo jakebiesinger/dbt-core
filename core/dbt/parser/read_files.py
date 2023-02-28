@@ -6,6 +6,7 @@ from dbt.clients.system import load_file_contents
 from dbt.contracts.files import (
     FilePath,
     ParseFileType,
+    SchemaSourceInModelFile,
     SourceFile,
     FileHash,
     AnySourceFile,
@@ -33,7 +34,12 @@ def load_source_file(
     saved_files,
 ) -> Optional[AnySourceFile]:
 
-    sf_cls = SchemaSourceFile if parse_file_type in _SCHEMA_FILE_TYPES else SourceFile
+    if parse_file_type == ParseFileType.Schema:
+        sf_cls = SchemaSourceFile
+    elif parse_file_type == ParseFileType.SchemaInModel:
+        sf_cls = SchemaSourceInModelFile
+    else:
+        sf_cls = SourceFile
     source_file = sf_cls(
         path=path,
         checksum=FileHash.empty(),
@@ -72,8 +78,10 @@ def load_source_file(
     elif parse_file_type == ParseFileType.SchemaInModel and source_file.contents:
         dfy = yaml_frontmatter_from_file(source_file) or {}
         if dfy:
+            # HACK: perhaps we can save the model name on the the source_file instead?
+            model_name = os.path.splitext(os.path.split(source_file.path.relative_path)[-1])[0]
             validate_yaml_in_model_frontmatter(source_file.path.original_file_path, dfy)
-            source_file.dfy = dfy
+            source_file.dfy = {"version": 2, "models": [{"name": model_name, **dfy}]}
         else:
             source_file = None
     return source_file

@@ -46,7 +46,7 @@ from dbt.context.docs import generate_runtime_docs_context
 from dbt.context.macro_resolver import MacroResolver, TestMacroNamespace
 from dbt.context.configured import generate_macro_context
 from dbt.context.providers import ParseProvider
-from dbt.contracts.files import FileHash, ParseFileType, SchemaSourceFile
+from dbt.contracts.files import FileHash, ParseFileType, SchemaSourceFile, SchemaSourceInModelFile
 from dbt.parser.read_files import read_files, load_source_file
 from dbt.parser.partial import PartialParsing, special_override_macros
 from dbt.contracts.graph.manifest import (
@@ -464,20 +464,26 @@ class ManifestLoader:
             # Parse the project files for this parser
             parser: Parser = parser_cls(project, self.manifest, self.root_project)
             for file_id in parser_files[parser_name]:
+                print(f"parse_project: file_id ${file_id}")
+
                 block = FileBlock(self.manifest.files[file_id])
-                if isinstance(parser, SchemaInModelParser):
-                    parser.parse_file(block)
-                elif isinstance(parser, SchemaParser):
+                if isinstance(parser, SchemaParser):
                     assert isinstance(block.file, SchemaSourceFile)
+                    # TODO: Not sure why pp_dict is being dropped
+                    # if self.partially_parsing and not isinstance(block.file, SchemaSourceInModelFile):
                     if self.partially_parsing:
                         dct = block.file.pp_dict
                     else:
                         dct = block.file.dict_from_yaml
                     # this is where the schema file gets parsed
+                    print(f"parse_project: schema parse on dct ${dct}")
+
                     parser.parse_file(block, dct=dct)
                     # Came out of here with UnpatchedSourceDefinition containing configs at the source level
                     # and not configs at the table level (as expected)
                 else:
+                    print(f"parse_project: non-schema parse block ${block}")
+
                     parser.parse_file(block)
                 project_parsed_path_count += 1
 

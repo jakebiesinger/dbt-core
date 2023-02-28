@@ -1,6 +1,7 @@
 import hashlib
 import os
 from dataclasses import dataclass, field
+from typing_extensions import override
 
 from mashumaro.types import SerializableType
 from typing import List, Optional, Union, Dict, Any
@@ -170,8 +171,10 @@ class BaseSourceFile(dbtClassMixin, SerializableType):
 
     @classmethod
     def _deserialize(cls, dct: Dict[str, int]):
-        if dct["parse_file_type"] == "schema":
+        if dct["parse_file_type"] == ParseFileType.Schema:
             sf = SchemaSourceFile.from_dict(dct)
+        elif dct["parse_file_type"] == ParseFileType.SchemaInModel:
+            sf = SchemaSourceInModelFile.from_dict(dct)
         else:
             sf = SourceFile.from_dict(dct)
         return sf
@@ -326,4 +329,14 @@ class SchemaSourceFile(BaseSourceFile):
                 del self.env_vars[yaml_key]
 
 
-AnySourceFile = Union[SchemaSourceFile, SourceFile]
+@dataclass
+class SchemaSourceInModelFile(SchemaSourceFile):
+    @override
+    @property
+    def file_id(self):
+        if isinstance(self.path, RemoteFile):
+            return None
+        return f"{self.project_name}://{self.path.original_file_path}_schema"
+
+
+AnySourceFile = Union[SchemaSourceFile, SchemaSourceInModelFile, SourceFile]

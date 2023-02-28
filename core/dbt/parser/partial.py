@@ -44,6 +44,7 @@ parse_file_type_to_key = {
     ParseFileType.Seed: "seeds",
     ParseFileType.Snapshot: "snapshots",
     ParseFileType.Analysis: "analyses",
+    ParseFileType.SchemaInModel: "models",
 }
 
 
@@ -118,14 +119,21 @@ class PartialParsing:
         changed_schema_files = []
         unchanged = []
         for file_id in common:
+            print(f"build_file_diff: file_id ${file_id}")
+
             if self.saved_files[file_id].checksum == self.new_files[file_id].checksum:
                 unchanged.append(file_id)
             else:
                 # separate out changed schema files
-                if self.saved_files[file_id].parse_file_type == ParseFileType.Schema:
+                if self.saved_files[file_id].parse_file_type in [
+                    ParseFileType.Schema,
+                    ParseFileType.SchemaInModel,
+                ]:
                     sf = self.saved_files[file_id]
-                    if type(sf).__name__ != "SchemaSourceFile":
+                    if type(sf).__name__ not in ["SchemaSourceFile", "SchemaSourceInModelFile"]:
                         raise Exception(f"Serialization failure for {file_id}")
+                    print(f"build_file_diff: changed schema ${sf}")
+
                     changed_schema_files.append(file_id)
                 else:
                     if self.saved_files[file_id].parse_file_type in mg_files:
@@ -191,6 +199,8 @@ class PartialParsing:
 
     # Add the file to the project parser dictionaries to schedule parsing
     def add_to_pp_files(self, source_file):
+        print(f"add_to_pp_files: source_file ${source_file}")
+
         file_id = source_file.file_id
         parser_name = parse_file_type_to_parser[source_file.parse_file_type]
         project_name = source_file.project_name
@@ -225,7 +235,7 @@ class PartialParsing:
     def add_to_saved(self, file_id):
         # add file object to saved manifest.files
         source_file = deepcopy(self.new_files[file_id])
-        if source_file.parse_file_type == ParseFileType.Schema:
+        if source_file.parse_file_type in [ParseFileType.Schema, ParseFileType.SchemaInModel]:
             self.handle_added_schema_file(source_file)
         self.saved_files[file_id] = source_file
         # update pp_files to parse
@@ -334,13 +344,19 @@ class PartialParsing:
 
         # look at patch_path in model node to see if we need
         # to reapply a patch from a schema_file.
-        if node.patch_path:
+        if node.patch_path and source_file.parse_file_type != ParseFileType.Model:
             file_id = node.patch_path
+            # if source_file.parse_file_type == ParseFileType.Model:
+            #     parse_file_type = ParseFileType.SchemaInModel
+            # else:
+            #     parse_file_type = source_file.parse_file_type
+            parse_file_type = source_file.parse_file_type
             # it might be changed...  then what?
             if file_id not in self.file_diff["deleted"] and file_id in self.saved_files:
                 # schema_files should already be updated
                 schema_file = self.saved_files[file_id]
-                dict_key = parse_file_type_to_key[source_file.parse_file_type]
+
+                dict_key = parse_file_type_to_key[parse_file_type]
                 # look for a matching list dictionary
                 elem_patch = None
                 if dict_key in schema_file.dict_from_yaml:
@@ -579,6 +595,7 @@ class PartialParsing:
     # Schema files -----------------------
     # Changed schema files
     def change_schema_file(self, file_id):
+        print(f"change_schema_file: file_id ${file_id}")
         saved_schema_file = self.saved_files[file_id]
         new_schema_file = deepcopy(self.new_files[file_id])
         saved_yaml_dict = saved_schema_file.dict_from_yaml
@@ -590,6 +607,8 @@ class PartialParsing:
             saved_schema_file.pp_dict = {"version": new_yaml_dict["version"]}
         else:
             saved_schema_file.pp_dict = {}
+        print(f"change_schema_file: saved_schema_file ${saved_schema_file}")
+
         self.handle_schema_file_changes(saved_schema_file, saved_yaml_dict, new_yaml_dict)
 
         # copy from new schema_file to saved_schema_file to preserve references
@@ -611,10 +630,14 @@ class PartialParsing:
         self.deleted_manifest.files[file_id] = self.saved_manifest.files.pop(file_id)
 
     # For each key in a schema file dictionary, process the changed, deleted, and added
-    # elemnts for the key lists
+    # elements for the key lists
     def handle_schema_file_changes(self, schema_file, saved_yaml_dict, new_yaml_dict):
         # loop through comparing previous dict_from_yaml with current dict_from_yaml
         # Need to do the deleted/added/changed thing, just like the files lists
+
+        print(
+            f"handle_schema_file_changes: schema_file\n${schema_file}\nwith saved_yaml_dict\n{saved_yaml_dict}\nvs new_yaml_dict\n{new_yaml_dict}\n"
+        )
 
         env_var_changes = {}
         if schema_file.file_id in self.env_vars_changed_schema_files:
@@ -625,6 +648,7 @@ class PartialParsing:
             key_diff = self.get_diff_for(dict_key, saved_yaml_dict, new_yaml_dict)
             if key_diff["changed"]:
                 for elem in key_diff["changed"]:
+                    # import ipdb; ipdb.set_trace()
                     self.delete_schema_mssa_links(schema_file, dict_key, elem)
                     self.merge_patch(schema_file, dict_key, elem)
             if key_diff["deleted"]:
@@ -789,6 +813,9 @@ class PartialParsing:
 
     # Merge a patch file into the pp_dict in a schema file
     def merge_patch(self, schema_file, key, patch):
+        # import ipdb; ipdb.set_trace()
+        print(f"merge_patch: schema_file ${schema_file} with key {key} patch {patch}")
+
         if not schema_file.pp_dict:
             schema_file.pp_dict = {"version": schema_file.dict_from_yaml["version"]}
         pp_dict = schema_file.pp_dict

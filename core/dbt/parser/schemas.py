@@ -5,12 +5,13 @@ import pathlib
 from abc import ABCMeta, abstractmethod
 from hashlib import md5
 from typing import Iterable, Dict, Any, Union, List, Optional, Generic, TypeVar, Type
+from typing_extensions import override
 
 from dbt.dataclass_schema import ValidationError, dbtClassMixin
 
 from dbt.adapters.factory import get_adapter, get_adapter_package_names
 from dbt.clients.jinja import get_rendered, add_rendered_test_kwargs
-from dbt.clients.yaml_helper import parse_yaml_frontmatter, load_yaml_text
+from dbt.clients.yaml_helper import parse_yaml_frontmatter, load_yaml_text, split_yaml_frontmatter
 from dbt.parser.schema_renderer import SchemaYamlRenderer
 from dbt.context.context_config import (
     ContextConfig,
@@ -112,7 +113,10 @@ def yaml_frontmatter_from_file(source_file: SchemaSourceFile) -> Dict[str, Any] 
     """Read only the frontmatter of the given file. If loading the yaml fails, raise an exception."""
     try:
         # source_file.contents can sometimes be None
-        return parse_yaml_frontmatter(source_file.contents or "", "warn_or_error")[0]
+        frontmatter, _ = split_yaml_frontmatter(
+            source_file.contents, source_file.path.original_file_path
+        )
+        return parse_yaml_frontmatter(frontmatter, source_file.contents) if frontmatter else None
     except DbtValidationError as e:
         raise YamlLoadError(
             project_name=source_file.project_name, path=source_file.path.relative_path, exc=e
@@ -428,6 +432,7 @@ class SchemaParser(SimpleParser[GenericTestBlock, GenericTestNode]):
         return node
 
     def add_test_node(self, block: GenericTestBlock, node: GenericTestNode):
+        print(f"SchemaParser add_test_node block ${block} with node {node}")
         test_from = {"key": block.target.yaml_key, "name": block.target.name}
         if node.config.enabled:
             self.manifest.add_node(block.file, node, test_from)
@@ -549,27 +554,31 @@ class SchemaParser(SimpleParser[GenericTestBlock, GenericTestNode]):
 
 
 class SchemaInModelParser(SchemaParser):
+    @override
     def parse_file(self, block: FileBlock, dct: Dict = None) -> None:
+        print(f"SchemaInModelParser parse_file block ${block} with dct {dct}")
+        # import ipdb; ipdb.set_trace()
         if not dct:
-            dct, _ = parse_yaml_frontmatter(block.contents, "warn_or_error")
+            # import ipdb; ipdb.set_trace()
+            frontmatter, _ = split_yaml_frontmatter(block.contents, block.path)
+            parsed = parse_yaml_frontmatter(frontmatter, block.contents)
+
+            # TODO: this feels a bit hacky. Is there a cleaner way to get the implicit model?
+            # TODO: use block.file.model_name
+            # "prefix" the dct with the current file's model.
+            dct = {"version": 2, "models": [{"name": block.name, **parsed}]}
 
         if dct:
-            # TODO: this feels a bit hacky. Is there a cleaner way to get the implicit model?
-
-            # "prefix" the dct with the current file's model.
-            with_prefix = {"models": [{"name": block.name, **dct}]}
-
             # contains the FileBlock and the data (dictionary)
-            yaml_block = YamlBlock.from_file_block(block, with_prefix)
+            # import ipdb; ipdb.set_trace()
+            yaml_block = YamlBlock.from_file_block(block, dct)
 
             parser: YamlDocsReader
 
-            # TODO: Make the model implicitly "prefixed" using the containing model
-            # Right now, the entire `version:2 models: [{name: <this>, description: "foo"}]` block
-            # needs to be specified in the yaml.
-
             parser = TestablePatchParser(self, yaml_block, "models")
             for test_block in parser.parse():
+                print(f"SchemaInModelParser parse_tests test_block ${test_block}")
+
                 self.parse_tests(test_block)
 
 
@@ -873,6 +882,7 @@ class NodePatchParser(NonSourceParser[NodeTarget, ParsedNodePatch], Generic[Node
             docs=block.target.docs,
             config=block.target.config,
         )
+        # import ipdb; ipdb.set_trace()
         assert isinstance(self.yaml.file, SchemaSourceFile)
         source_file: SchemaSourceFile = self.yaml.file
         if patch.yaml_key in ["models", "seeds", "snapshots"]:
@@ -916,7 +926,7 @@ class NodePatchParser(NonSourceParser[NodeTarget, ParsedNodePatch], Generic[Node
                     raise ParsingError(msg)
 
                 # all nodes in the disabled dict have the same unique_id so just grab the first one
-                # to append with the uniqe id
+                # to append with the unique id
                 source_file.append_patch(patch.yaml_key, found_nodes[0].unique_id)
                 for node in found_nodes:
                     node.patch_path = source_file.file_id
